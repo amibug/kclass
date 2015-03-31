@@ -37,7 +37,6 @@ function process(what, o, supr) {
 
 
 function extend(o, fromSub) {
-
     function noop() {}
     noop[proto] = this[proto];
     // supr Class
@@ -55,7 +54,7 @@ function extend(o, fromSub) {
         }
     }
 
-    // 添加实例方法,添加到prototype中
+    // fn.methods添加方法到prototype中
     fn.methods = function (o) {
         process(prototype, o, supr);
         // noop[proto] = this[proto];fn[proto] = prototype; to complete inherit
@@ -66,6 +65,8 @@ function extend(o, fromSub) {
     fn.methods.call(fn, _methods).prototype.constructor = fn;
 
     fn.extend = extend;
+    // fn[proto].implement添加方法到prototype中
+    // fn.statics添加方法到fn中
     fn[proto].implement = fn.statics = function (o, optFn) {
         o = typeof o == 'string' ? (function () {
             var obj = {};
