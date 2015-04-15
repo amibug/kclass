@@ -1,10 +1,21 @@
-var extend = require('./extend');
-var emitter = require('./emitter');
+var Klass = require('./klass');
+var Emitter = require('./emitter');
 var _ = require('./util');
 
-var Kclass = function(o){
-    var fn = extend.call(_.isFn(o) ? o : function () {}, o, 1);
-    return fn;
-};
+
+var proto = 'prototype',
+    Kclass =  new Klass(),
+    fn = Kclass[proto];
+
+fn.implement(new Emitter());
+
+fn.implement({
+    init: function(){
+        this.emit('$init');
+    },
+    destroy: function(){
+        this.emit('$destroy');
+    }
+})
 
 module.exports = Kclass;

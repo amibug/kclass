@@ -1,0 +1,37 @@
+{
+  "kclass.js": {
+    "id": "kclass.js",
+    "type": "js",
+    "mtime": 1429079247887,
+    "src": "var Klass = require('./klass');\r\nvar Emitter = require('./emitter');\r\nvar _ = require('./util');\r\n\r\n\r\nvar proto = 'prototype',\r\n    Kclass =  new Klass(),\r\n    fn = Kclass[proto];\r\n\r\nfn.implement(new Emitter());\r\n\r\nfn.implement({\r\n    init: function(){\r\n        this.emit('$init');\r\n    },\r\n    destroy: function(){\r\n        this.emit('$destroy');\r\n    }\r\n})\r\n\r\nmodule.exports = Kclass;",
+    "deps": {
+      "./klass": "klass.js",
+      "./emitter": "emitter.js",
+      "./util": "util.js"
+    },
+    "entry": true
+  },
+  "util.js": {
+    "id": "util.js",
+    "type": "js",
+    "mtime": 1429078127805,
+    "src": "\"use strict\";\r\n\r\nvar _ = function(obj) {},\r\n    f = 'function';\r\n\r\n_.isFn = function(o) {\r\n    return typeof o === f\r\n};\r\n\r\n_.noop = function(){};\r\n\r\nmodule.exports = _;",
+    "deps": {}
+  },
+  "klass.js": {
+    "id": "klass.js",
+    "type": "js",
+    "mtime": 1429077941631,
+    "src": "\"use strict\";\r\nvar _ = require('./util');\r\n\r\nvar fnTest = /xyz/.test(function () {xyz}) ? /\\bsupr\\b/ : /.*/,\r\n    proto = 'prototype';\r\n\r\n\r\nfunction wrap(k, fn, supr) {\r\n    // supr\r\n    return function () {\r\n        var tmp = this.supr;\r\n        this.supr = supr[proto][k];\r\n        var undef = {}.fabricatedUndefined;\r\n        var ret = undef;\r\n        try {\r\n            ret = fn.apply(this, arguments);\r\n        } finally {\r\n            this.supr = tmp;\r\n        }\r\n        return ret;\r\n    }\r\n}\r\n\r\nfunction process(what, o, supr) {\r\n    for (var k in o) {\r\n        if (o.hasOwnProperty(k)) {\r\n            what[k] = _.isFn(o[k])\r\n                && _.isFn(supr[proto][k])\r\n                && fnTest.test(o[k])\r\n                ? wrap(k, o[k], supr) : o[k]\r\n        }\r\n    }\r\n}\r\n\r\n\r\nfunction extend(o, fromSub) {\r\n    function noop() {}\r\n    noop[proto] = this[proto];\r\n    // supr Class\r\n    var supr = this,\r\n        prototype = new noop(),\r\n        isFunction = _.isFn(o),\r\n        _constructor = isFunction ? o : this,\r\n        _methods = isFunction ? {} : o;\r\n\r\n    function fn() {\r\n        if (this.init) this.init.apply(this, arguments);\r\n        else {\r\n            fromSub || isFunction && supr.apply(this, arguments);\r\n            _constructor.apply(this, arguments);\r\n        }\r\n    }\r\n\r\n    // fn.methods添加方法到prototype中\r\n    fn.methods = function (o) {\r\n        process(prototype, o, supr);\r\n        // noop[proto] = this[proto];fn[proto] = prototype; to complete inherit\r\n        return this;\r\n    };\r\n\r\n    // fn.prototype.constructor = fn;\r\n    fn.methods.call(fn, _methods).prototype.constructor = fn;\r\n\r\n    fn.extend = extend;\r\n    // fn[proto].implement添加方法到prototype中\r\n    // fn.statics添加方法到fn中\r\n    fn[proto].implement = fn.statics = function (o, optFn) {\r\n        o = typeof o == 'string' ? (function () {\r\n            var obj = {};\r\n            obj[o] = optFn;\r\n            return obj;\r\n        }()) : o;\r\n        process(this, o, supr);\r\n        return this;\r\n    };\r\n\r\n    return fn;\r\n}\r\n\r\nfunction klass(o) {\r\n    return extend.call(_.isFn(o) ? o : function () {}, o, 1)\r\n}\r\n\r\nmodule.exports = klass;\r\n",
+    "deps": {
+      "./util": "util.js"
+    }
+  },
+  "emitter.js": {
+    "id": "emitter.js",
+    "type": "js",
+    "mtime": 1428032269278,
+    "src": "\r\n/**\r\n * Expose `Emitter`.\r\n */\r\n\r\nmodule.exports = Emitter;\r\n\r\n\r\nfunction Emitter(obj) {\r\n    if (obj) return mixin(obj);\r\n};\r\n\r\nfunction mixin(obj) {\r\n    for (var key in Emitter.prototype) {\r\n        obj[key] = Emitter.prototype[key];\r\n    }\r\n    return obj;\r\n}\r\n\r\nEmitter.prototype.on =\r\n    Emitter.prototype.addEventListener = function(event, fn){\r\n        this._callbacks = this._callbacks || {};\r\n        (this._callbacks['$' + event] = this._callbacks['$' + event] || [])\r\n            .push(fn);\r\n        return this;\r\n    };\r\n\r\nEmitter.prototype.once = function(event, fn){\r\n    function on() {\r\n        this.off(event, on);\r\n        fn.apply(this, arguments);\r\n    }\r\n\r\n    on.fn = fn;\r\n    this.on(event, on);\r\n    return this;\r\n};\r\n\r\nEmitter.prototype.off =\r\n    Emitter.prototype.removeListener =\r\n        Emitter.prototype.removeAllListeners =\r\n            Emitter.prototype.removeEventListener = function(event, fn){\r\n                this._callbacks = this._callbacks || {};\r\n\r\n                // all\r\n                if (0 == arguments.length) {\r\n                    this._callbacks = {};\r\n                    return this;\r\n                }\r\n\r\n                // specific event\r\n                var callbacks = this._callbacks['$' + event];\r\n                if (!callbacks) return this;\r\n\r\n                // remove all handlers\r\n                if (1 == arguments.length) {\r\n                    delete this._callbacks['$' + event];\r\n                    return this;\r\n                }\r\n\r\n                // remove specific handler\r\n                var cb;\r\n                for (var i = 0; i < callbacks.length; i++) {\r\n                    cb = callbacks[i];\r\n                    if (cb === fn || cb.fn === fn) {\r\n                        callbacks.splice(i, 1);\r\n                        break;\r\n                    }\r\n                }\r\n                return this;\r\n            };\r\n\r\nEmitter.prototype.emit = function(event){\r\n    this._callbacks = this._callbacks || {};\r\n    var args = [].slice.call(arguments, 1)\r\n        , callbacks = this._callbacks['$' + event];\r\n\r\n    if (callbacks) {\r\n        callbacks = callbacks.slice(0);\r\n        for (var i = 0, len = callbacks.length; i < len; ++i) {\r\n            callbacks[i].apply(this, args);\r\n        }\r\n    }\r\n\r\n    return this;\r\n};\r\n\r\nEmitter.prototype.listeners = function(event){\r\n    this._callbacks = this._callbacks || {};\r\n    return this._callbacks['$' + event] || [];\r\n};\r\n\r\nEmitter.prototype.hasListeners = function(event){\r\n    return !! this.listeners(event).length;\r\n};",
+    "deps": {}
+  }
+}

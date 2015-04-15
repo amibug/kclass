@@ -1,12 +1,9 @@
 "use strict";
+var _ = require('./util');
 
-var f = 'function',
-    fnTest = /xyz/.test(function () {xyz}) ? /\bsupr\b/ : /.*/,
+var fnTest = /xyz/.test(function () {xyz}) ? /\bsupr\b/ : /.*/,
     proto = 'prototype';
 
-function isFn(o) {
-    return typeof o === f
-}
 
 function wrap(k, fn, supr) {
     // supr
@@ -27,8 +24,8 @@ function wrap(k, fn, supr) {
 function process(what, o, supr) {
     for (var k in o) {
         if (o.hasOwnProperty(k)) {
-            what[k] = isFn(o[k])
-                && isFn(supr[proto][k])
+            what[k] = _.isFn(o[k])
+                && _.isFn(supr[proto][k])
                 && fnTest.test(o[k])
                 ? wrap(k, o[k], supr) : o[k]
         }
@@ -42,12 +39,12 @@ function extend(o, fromSub) {
     // supr Class
     var supr = this,
         prototype = new noop(),
-        isFunction = isFn(o),
+        isFunction = _.isFn(o),
         _constructor = isFunction ? o : this,
         _methods = isFunction ? {} : o;
 
     function fn() {
-        if (this.initialize) this.initialize.apply(this, arguments);
+        if (this.init) this.init.apply(this, arguments);
         else {
             fromSub || isFunction && supr.apply(this, arguments);
             _constructor.apply(this, arguments);
@@ -80,4 +77,8 @@ function extend(o, fromSub) {
     return fn;
 }
 
-module.exports = extend;
+function klass(o) {
+    return extend.call(_.isFn(o) ? o : function () {}, o, 1)
+}
+
+module.exports = klass;
