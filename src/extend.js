@@ -55,6 +55,7 @@ function extend(o, fromSub) {
     fn.methods = function (o) {
         process(prototype, o, supr);
         // noop[proto] = this[proto];fn[proto] = prototype; to complete inherit
+        fn[proto] = prototype;
         return this;
     };
 
