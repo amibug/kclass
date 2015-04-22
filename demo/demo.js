@@ -1,7 +1,6 @@
 (function() {
-
     var Person = Kclass.extend({
-        init: function () {
+        init: function (options) {
             console.log('initPerson');
         },
         call: function () {
@@ -9,33 +8,34 @@
         }
     });
     var Son = Person.extend({
-        supr: function (o) {
-            console.log('supr');
-        },
-        init: function () {
-            this.supr();
+        init: function (options) {
+            this.supr(options);
             console.log('initSon');
         }
     });
     var Daughter = Person.extend({
-        init: function () {
-            this.supr();
+        init: function (options) {
+            this.supr(options);
             console.log('initDaughter');
         }
     });
 
-
-    var Tom = new Son({
-        data: 'xxx'
-    });
-    var Lili = new Daughter();
+    var Tom = new Son();  // console.log initPerson initSon
+    var Lili = new Daughter(); // console.log initPerson initDaughter
 
     Tom.on('init', function () {
-        console.log('initSonCB');
+        console.log('initTom');
     });
-    Tom.emit('init');
-    Lili.emit('init');
-    debugger;
-    Tom.off('init');
-    Tom.emit('init');
+    Lili.once('init', function () {
+        console.log('initLili');
+    });
+    Tom.emit('init'); // console.log initTom
+    Lili.emit('init'); // console.log  initLili
+    Lili.emit('init'); // console.log nothing
+    Tom.off('init'); //
+    Tom.emit('init'); // console.log nothing
+    console.log(Lili instanceof Person);//true
+    console.log(Lili instanceof Daughter);//true
+    console.log(Tom instanceof Person);//true
+    console.log(Tom instanceof Son);//true
 }());
